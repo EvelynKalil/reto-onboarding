@@ -7,7 +7,6 @@ import co.com.evelyn.onboardingreactivo.model.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -44,19 +43,20 @@ public class ReqresAdapter {
                         .lastName(data.getLast_name())
                         .avatar(data.getAvatar())
                         .build())
-                .doOnNext(u -> log.info("✅ Usuario obtenido de Reqres.in: {}", u))
-                .onErrorResume(WebClientResponseException.class, ex -> {
-                    int status = ex.getStatusCode().value();
-                    if (status == HttpStatus.NOT_FOUND.value()) {
-                        log.warn("⚠️ Usuario {} no encontrado en Reqres.in", id);
-                        return Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND));
-                    }
-                    log.error("❌ Error HTTP {} desde Reqres.in", status, ex);
-                    return Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR));
-                })
+                .doOnNext(u -> log.info("Usuario obtenido de Reqres.in: {}", u))
                 .onErrorResume(ex -> {
-                    log.error("🌐 Error inesperado al consumir Reqres.in", ex);
+                    if (ex instanceof WebClientResponseException responseEx) {
+                        int status = responseEx.getStatusCode().value();
+                        if (status == 404) {
+                            log.warn("Usuario {} no encontrado en Reqres.in", id);
+                            return Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND));
+                        }
+                        log.error("Error HTTP {} desde Reqres.in", status, ex);
+                        return Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR));
+                    }
+                    log.error("Error inesperado al consumir Reqres.in", ex);
                     return Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR));
                 });
     }
+
 }
