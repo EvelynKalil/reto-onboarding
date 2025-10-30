@@ -1,5 +1,6 @@
 package co.com.evelyn.onboardingreactivo.api;
 
+import co.com.evelyn.onboardingreactivo.api.util.error.ApplyErrorHandler;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import co.com.evelyn.onboardingreactivo.usecase.user.UserUseCase;
 import lombok.RequiredArgsConstructor;
@@ -16,38 +17,53 @@ import static org.springframework.web.reactive.function.BodyInserters.fromValue;
 public class Handler {
 
     private final UserUseCase userUseCase;
+    private final ApplyErrorHandler applyErrorHandler;
 
-    // 🔹 Crear usuario (por ID desde reqres.in)
+    /** POST /users/{id} */
     public Mono<ServerResponse> createUser(ServerRequest request) {
         Integer id = Integer.parseInt(request.pathVariable("id"));
-        return userUseCase.createUserById(id)
-                .flatMap(user -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(fromValue(user)));
+
+        Mono<ServerResponse> pipeline =
+                userUseCase.createUserById(id)
+                        .flatMap(user -> ServerResponse.ok()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(fromValue(user)));
+
+        return applyErrorHandler.apply(pipeline);
     }
 
-    // 🔹 Obtener usuario por ID
+    /** GET /users/{id} */
     public Mono<ServerResponse> getUserById(ServerRequest request) {
         Integer id = Integer.parseInt(request.pathVariable("id"));
-        return userUseCase.getUserById(id)
-                .flatMap(user -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(fromValue(user)))
-                .onErrorResume(e -> ServerResponse.notFound().build());
+
+        Mono<ServerResponse> pipeline =
+                userUseCase.getUserById(id)
+                        .flatMap(user -> ServerResponse.ok()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(fromValue(user)));
+
+        return applyErrorHandler.apply(pipeline);
     }
 
-    // 🔹 Listar todos los usuarios
+    /** GET /users */
     public Mono<ServerResponse> getAllUsers(ServerRequest request) {
-        return ServerResponse.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(userUseCase.getAllUsers(), User.class);
+        Mono<ServerResponse> pipeline =
+                ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(userUseCase.getAllUsers(), User.class);
+
+        return applyErrorHandler.apply(pipeline);
     }
 
-    // 🔹 Filtrar usuarios por nombre
+    /** GET /users?name= */
     public Mono<ServerResponse> getUsersByName(ServerRequest request) {
         String name = request.queryParam("name").orElse("");
-        return ServerResponse.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(userUseCase.getUsersByName(name), User.class);
+
+        Mono<ServerResponse> pipeline =
+                ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(userUseCase.getUsersByName(name), User.class);
+
+        return applyErrorHandler.apply(pipeline);
     }
 }

@@ -1,6 +1,10 @@
 package co.com.evelyn.onboardingreactivo.r2dbc;
 
 import co.com.evelyn.onboardingreactivo.consumer.ReqresAdapter;
+import co.com.evelyn.onboardingreactivo.model.enums.TechnicalMessage;
+import co.com.evelyn.onboardingreactivo.model.exceptions.BusinessException;
+import co.com.evelyn.onboardingreactivo.model.exceptions.ProcessorException;
+import co.com.evelyn.onboardingreactivo.model.exceptions.TechnicalException;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import co.com.evelyn.onboardingreactivo.model.user.gateways.UserRepository;
 import co.com.evelyn.onboardingreactivo.r2dbc.entity.UserEntity;
@@ -30,34 +34,53 @@ public class UserRepositoryAdapter
         this.redisRepositoryAdapter = redisRepositoryAdapter;
     }
 
+    /** Buscar usuario por ID (con cache y manejo de errores) */
     @Override
     public Mono<User> findById(Integer id) {
         return redisRepositoryAdapter.getUserFromCache(id)
                 .switchIfEmpty(
                         repository.findById(id)
+                                .switchIfEmpty(Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND)))
                                 .map(this::toEntity)
                                 .flatMap(user ->
                                         redisRepositoryAdapter.saveUserToCache(user)
                                                 .thenReturn(user)
                                 )
+                )
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Mono.error(ex)
+                        : Mono.error(new TechnicalException(ex, TechnicalMessage.DATABASE_ERROR))
                 );
     }
 
+    /** Listar todos los usuarios */
     @Override
     public Flux<User> findAll() {
-        return repository.findAll().map(this::toEntity);
+        return repository.findAll()
+                .map(this::toEntity)
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Flux.error(ex)
+                        : Flux.error(new TechnicalException(ex, TechnicalMessage.DATABASE_ERROR))
+                );
     }
 
+    /** Filtrar usuarios por nombre */
     @Override
     public Flux<User> findByName(String name) {
-        return repository.findByName(name).map(this::toEntity);
+        return repository.findByName(name)
+                .map(this::toEntity)
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Flux.error(ex)
+                        : Flux.error(new TechnicalException(ex, TechnicalMessage.DATABASE_ERROR))
+                );
     }
 
+    /** Guardar usuario (insert/update + cache) */
     @Override
     public Mono<User> save(User user) {
         return repository.existsById(user.getId())
                 .flatMap(exists -> exists
-                                ? repository.save(toData(user)) // update
+                                ? repository.save(toData(user))
                                 : repository.insert(
                                 user.getId(),
                                 user.getEmail(),
@@ -70,13 +93,21 @@ public class UserRepositoryAdapter
                 .flatMap(savedUser ->
                         redisRepositoryAdapter.saveUserToCache(savedUser)
                                 .thenReturn(savedUser)
+                )
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Mono.error(ex)
+                        : Mono.error(new TechnicalException(ex, TechnicalMessage.DATABASE_ERROR))
                 );
     }
 
-
+    /** Consultar usuario en la API externa Reqres */
     @Override
     public Mono<User> fetchFromApi(Integer id) {
         return reqresAdapter.fetchUserById(id)
-                .doOnNext(u -> System.out.println("Usuario obtenido de reqres.in: " + u));
+                .switchIfEmpty(Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND)))
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Mono.error(ex)
+                        : Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR))
+                );
     }
 }

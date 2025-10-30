@@ -1,5 +1,9 @@
 package co.com.evelyn.onboardingreactivo.usecase.user;
 
+import co.com.evelyn.onboardingreactivo.model.enums.TechnicalMessage;
+import co.com.evelyn.onboardingreactivo.model.exceptions.BusinessException;
+import co.com.evelyn.onboardingreactivo.model.exceptions.ProcessorException;
+import co.com.evelyn.onboardingreactivo.model.exceptions.TechnicalException;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import co.com.evelyn.onboardingreactivo.model.user.gateways.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,28 +15,44 @@ public class UserUseCase {
 
     private final UserRepository userRepository;
 
-    // Crear usuario (traer de API si no existe)
+    /** Crear usuario (traer de API si no existe) */
     public Mono<User> createUserById(Integer id) {
         return userRepository.findById(id)
                 .switchIfEmpty(
                         userRepository.fetchFromApi(id)
                                 .flatMap(userRepository::save)
+                )
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Mono.error(ex)
+                        : Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR))
                 );
     }
 
-    // Obtener usuario por ID
+    /** Obtener usuario por ID */
     public Mono<User> getUserById(Integer id) {
         return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new RuntimeException("User not found")));
+                .switchIfEmpty(Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND)))
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Mono.error(ex)
+                        : Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR))
+                );
     }
 
-    // Listar
+    /** Listar todos los usuarios */
     public Flux<User> getAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findAll()
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Flux.error(ex)
+                        : Flux.error(new TechnicalException(ex, TechnicalMessage.DATABASE_ERROR))
+                );
     }
 
-    // Filtrar por nombre
+    /** Filtrar por nombre */
     public Flux<User> getUsersByName(String name) {
-        return userRepository.findByName(name);
+        return userRepository.findByName(name)
+                .onErrorResume(ex -> ex instanceof ProcessorException
+                        ? Flux.error(ex)
+                        : Flux.error(new TechnicalException(ex, TechnicalMessage.DATABASE_ERROR))
+                );
     }
 }
