@@ -1,5 +1,6 @@
 package co.com.evelyn.onboardingreactivo.api.config;
 
+import co.com.evelyn.onboardingreactivo.model.events.gateways.EventPublisher;
 import co.com.evelyn.onboardingreactivo.model.user.gateways.UserRepository;
 import co.com.evelyn.onboardingreactivo.usecase.user.UserUseCase;
 import org.mockito.Mockito;
@@ -11,6 +12,7 @@ public class TestBeansConfig {
 
     @Bean
     public UserUseCase userUseCase() {
-        return new UserUseCase(Mockito.mock(UserRepository.class));
+        return new UserUseCase(Mockito.mock(UserRepository.class), Mockito.mock(EventPublisher.class));
+
     }
 }

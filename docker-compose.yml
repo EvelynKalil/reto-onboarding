@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: docker.io/library/postgres:14
+    image: postgres:14
     container_name: onboarding-postgres
     environment:
       POSTGRES_USER: user
@@ -15,10 +15,28 @@ services:
     restart: unless-stopped
 
   redis:
-    image: docker.io/library/redis:7.0
+    image: redis:7.0
     container_name: redis_onboarding
     ports:
       - "6379:6379"
+    restart: unless-stopped
+
+  localstack:
+    image: localstack/localstack:3.2
+    container_name: onboarding-localstack
+    environment:
+      - SERVICES=sqs,dynamodb
+      - DEBUG=1
+      - DEFAULT_REGION=us-east-1
+      - EDGE_PORT=4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+    ports:
+      - "4566:4566"  # puerto universal de LocalStack
+    volumes:
+      - "./localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
     restart: unless-stopped
 
 volumes:

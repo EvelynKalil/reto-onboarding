@@ -4,15 +4,15 @@ server:
 spring:
   application:
     name: onboarding-reactivo
+  main:
+    web-application-type: reactive
+  sql:
+    init:
+      mode: always
   r2dbc:
     url: "r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
     username: ${DB_USER}
     password: ${DB_PASSWORD}
-  sql:
-    init:
-      mode: always
-  main:
-    web-application-type: reactive
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
@@ -22,6 +22,9 @@ logging:
     org.springframework.r2dbc: DEBUG
     io.r2dbc.pool: DEBUG
 
+# -------------------------------
+# 🔹 Adaptadores de infraestructura
+# -------------------------------
 adapters:
   r2dbc:
     host: ${DB_HOST}
@@ -34,18 +37,42 @@ adapters:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
 
+# -------------------------------
+# 🔹 Configuración de AWS
+# -------------------------------
 aws:
-  endpoint: ${AWS_ENDPOINT}
-  region: ${AWS_REGION}
+  endpoint: ${AWS_ENDPOINT:http://localhost:4566}
+  region: ${AWS_REGION:us-east-1}
   sqs:
-    queue-url: ${AWS_SQS_QUEUE_URL}
+    queue-url: ${AWS_SQS_QUEUE_URL:http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/user-events-table}
   dynamodb:
-    table: ${AWS_DYNAMO_TABLE}
+    table: ${AWS_DYNAMO_TABLE:user-events-table}
 
+# -------------------------------
+# 🔹 Configuración del consumidor externo Reqres.in
+# -------------------------------
 reqres:
-  base-url: ${REQRES_BASE_URL}
-  api-key: ${REQRES_API_KEY}
+  base-url: ${REQRES_BASE_URL:https://reqres.in/api}
+  api-key: ${REQRES_API_KEY:reqres-free-v1}
 
+# -------------------------------
+# 🔹 Adaptador REST (compatibilidad anterior)
+# -------------------------------
+adapter:
+  restconsumer:
+    timeout: 5000
+    url: ${REQRES_BASE_URL:https://reqres.in/api}
+    apikey: ${REQRES_API_KEY:reqres-free-v1}
+
+# -------------------------------
+# 🔹 Configuración de CORS
+# -------------------------------
+cors:
+  allowed-origins: http://localhost:4200,http://localhost:8080
+
+# -------------------------------
+# 🔹 Gestión, métricas y salud
+# -------------------------------
 management:
   endpoints:
     web:
@@ -59,15 +86,9 @@ management:
     circuitbreakers:
       enabled: true
 
-cors:
-  allowed-origins: http://localhost:4200,http://localhost:8080
-
-adapter:
-  restconsumer:
-    timeout: 5000
-    url: ${REQRES_BASE_URL}
-    apikey: ${REQRES_API_KEY}
-
+# -------------------------------
+# 🔹 Configuración de Resilience4j
+# -------------------------------
 resilience4j:
   circuitbreaker:
     instances:

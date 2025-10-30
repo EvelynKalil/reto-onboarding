@@ -1,6 +1,7 @@
 package co.com.evelyn.onboardingreactivo.usecase.user;
 
 import co.com.evelyn.onboardingreactivo.model.enums.TechnicalMessage;
+import co.com.evelyn.onboardingreactivo.model.events.gateways.EventPublisher;
 import co.com.evelyn.onboardingreactivo.model.exceptions.BusinessException;
 import co.com.evelyn.onboardingreactivo.model.exceptions.ProcessorException;
 import co.com.evelyn.onboardingreactivo.model.exceptions.TechnicalException;
@@ -14,6 +15,7 @@ import reactor.core.publisher.Mono;
 public class UserUseCase {
 
     private final UserRepository userRepository;
+    private final EventPublisher eventPublisher;
 
     /** Crear usuario (traer de API si no existe) */
     public Mono<User> createUserById(Integer id) {
@@ -21,6 +23,10 @@ public class UserUseCase {
                 .switchIfEmpty(
                         userRepository.fetchFromApi(id)
                                 .flatMap(userRepository::save)
+                                .flatMap(savedUser ->
+                                        eventPublisher.publishUserCreated(savedUser)
+                                                .thenReturn(savedUser)
+                                )
                 )
                 .onErrorResume(ex -> ex instanceof ProcessorException
                         ? Mono.error(ex)
