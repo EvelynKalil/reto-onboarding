@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: docker.io/library/postgres:14
+    container_name: onboarding-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: usersdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: docker.io/library/redis:7.0
+    container_name: redis_onboarding
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

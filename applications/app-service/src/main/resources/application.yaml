@@ -1,0 +1,91 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: onboarding-reactivo
+  r2dbc:
+    url: "r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  sql:
+    init:
+      mode: always
+  main:
+    web-application-type: reactive
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+
+logging:
+  level:
+    org.springframework.r2dbc: DEBUG
+    io.r2dbc.pool: DEBUG
+
+adapters:
+  r2dbc:
+    host: ${DB_HOST}
+    port: ${DB_PORT}
+    database: ${DB_NAME}
+    schema: public
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+
+aws:
+  endpoint: ${AWS_ENDPOINT}
+  region: ${AWS_REGION}
+  sqs:
+    queue-url: ${AWS_SQS_QUEUE_URL}
+  dynamodb:
+    table: ${AWS_DYNAMO_TABLE}
+
+reqres:
+  base-url: ${REQRES_BASE_URL}
+  api-key: ${REQRES_API_KEY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+
+cors:
+  allowed-origins: http://localhost:4200,http://localhost:8080
+
+adapter:
+  restconsumer:
+    timeout: 5000
+    url: ${REQRES_BASE_URL}
+    apikey: ${REQRES_API_KEY}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      testGet:
+        registerHealthIndicator: true
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: 10s
+      testPost:
+        registerHealthIndicator: true
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: 10s
