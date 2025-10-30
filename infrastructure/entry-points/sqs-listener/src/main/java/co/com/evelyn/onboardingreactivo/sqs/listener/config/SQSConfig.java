@@ -1,18 +1,13 @@
 package co.com.evelyn.onboardingreactivo.sqs.listener.config;
 
 import co.com.evelyn.onboardingreactivo.sqs.listener.helper.SQSListener;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
-import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.metrics.MetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -27,7 +22,7 @@ public class SQSConfig {
 
     @Bean
     public SQSListener sqsListener(
-            @Qualifier("sqsListenerClient") SqsAsyncClient client,
+            SqsAsyncClient client, // Inyecta el cliente @Primary
             SQSProperties properties,
             Function<Message, Mono<Void>> fn
     ) {
@@ -39,27 +34,27 @@ public class SQSConfig {
                 .start();
     }
 
-    @Bean(name = "sqsListenerClient")
-    public SqsAsyncClient sqsListenerClient(SQSProperties properties, MetricPublisher publisher) {
-        // 🧩 Fallback de región seguro
+    @Bean
+    @Primary // 1. Es el bean primario
+    public SqsAsyncClient sqsAsyncClient(SQSProperties properties, MetricPublisher publisher) {
+
         String regionValue = properties.region() != null ? properties.region() : "us-east-1";
 
         return SqsAsyncClient.builder()
-                .endpointOverride(resolveEndpoint(properties))
-                .region(Region.of(regionValue))
-                .overrideConfiguration(o -> o.addMetricPublisher(publisher))
-                .credentialsProvider(getProviderChain())
-                .build();
-    }
 
-    private AwsCredentialsProviderChain getProviderChain() {
-        return AwsCredentialsProviderChain.builder()
-                .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
-                .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
-                .addCredentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
-                .addCredentialsProvider(ProfileCredentialsProvider.create())
-                .addCredentialsProvider(ContainerCredentialsProvider.builder().build())
-                .addCredentialsProvider(InstanceProfileCredentialsProvider.create())
+                // 2. Apunta a LocalStack (leido de entrypoint.sqs.endpoint)
+                .endpointOverride(resolveEndpoint(properties))
+
+                .region(Region.of(regionValue))
+
+                // 3. Usa credenciales "dummy"
+                .credentialsProvider(
+                        StaticCredentialsProvider.create(
+                                AwsBasicCredentials.create("test", "test")
+                        )
+                )
+
+                .overrideConfiguration(o -> o.addMetricPublisher(publisher))
                 .build();
     }
 

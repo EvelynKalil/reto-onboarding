@@ -4,7 +4,7 @@ import co.com.evelyn.onboardingreactivo.model.events.gateways.EventPublisher;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import co.com.evelyn.onboardingreactivo.sqs.sender.config.SQSSenderProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
+// Asegurate de que no haya import de @Qualifier
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -19,10 +19,10 @@ public class SQSSender implements EventPublisher {
 
     public SQSSender(
             SQSSenderProperties properties,
-            @Qualifier("configSqs") SqsAsyncClient client // 👈 aquí lo hacemos explícito
+            SqsAsyncClient client // CAMBIO: Sin @Qualifier
     ) {
         this.properties = properties;
-        this.client = client;
+        this.client = client; // Esto inyectara el bean @Primary
     }
 
     @Override

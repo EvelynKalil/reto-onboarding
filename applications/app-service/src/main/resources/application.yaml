@@ -36,6 +36,7 @@ adapters:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
+  # ELIMINAMOS EL BLOQUE 'adapters.sqs.sender' DE AQUI
 
 # -------------------------------
 # 🔹 Configuración de AWS
@@ -43,10 +44,28 @@ adapters:
 aws:
   endpoint: ${AWS_ENDPOINT:http://localhost:4566}
   region: ${AWS_REGION:us-east-1}
-  sqs:
-    queue-url: ${AWS_SQS_QUEUE_URL:http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/user-events-table}
   dynamodb:
     table: ${AWS_DYNAMO_TABLE:user-events-table}
+
+  # ESTE BLOQUE ES PARA 'SQSSenderProperties'
+  sqs:
+    region: ${aws.region}
+    endpoint: ${aws.endpoint}
+    queue-url: ${entrypoint.sqs.queue-url} # Referencia a la cola del listener
+
+# -------------------------------
+# 🔹 Configuración de SQS (Entrypoint)
+# -------------------------------
+# ESTE BLOQUE ES PARA 'SQSProperties' Y EL CLIENTE @Primary
+entrypoint:
+  sqs:
+    region: ${aws.region}
+    endpoint: ${aws.endpoint}
+    queue-url: ${AWS_SQS_QUEUE_URL:http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/user-events-table}
+    wait-time-seconds: ${AWS_SQS_WAIT_TIME:20}
+    max-number-of-messages: ${AWS_SQS_MAX_MESSAGES:10}
+    visibility-timeout-seconds: ${AWS_SQS_VISIBILITY_TIMEOUT:30}
+    number-of-threads: ${AWS_SQS_THREADS:1}
 
 # -------------------------------
 # 🔹 Configuración del consumidor externo Reqres.in
@@ -63,6 +82,7 @@ adapter:
     timeout: 5000
     url: ${REQRES_BASE_URL:https://reqres.in/api}
     apikey: ${REQRES_API_KEY:reqres-free-v1}
+  # ELIMINAMOS EL BLOQUE 'adapter.sqs.sender' DE AQUI
 
 # -------------------------------
 # 🔹 Configuración de CORS
