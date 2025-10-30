@@ -1,6 +1,8 @@
 package co.com.evelyn.onboardingreactivo.sqs.listener;
 
 import co.com.evelyn.onboardingreactivo.dynamodb.DynamoDBTemplateAdapter;
+import co.com.evelyn.onboardingreactivo.model.enums.TechnicalMessage;
+import co.com.evelyn.onboardingreactivo.model.exceptions.TechnicalException;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,16 +25,19 @@ public class SQSProcessor implements Function<Message, Mono<Void>> {
     @Override
     public Mono<Void> apply(Message message) {
         return Mono.fromCallable(() -> {
-                    log.info("📥 Mensaje recibido desde SQS: {}", message.body());
+                    log.info("Mensaje recibido desde SQS: {}", message.body());
                     try {
                         return mapper.readValue(message.body(), User.class);
                     } catch (IOException e) {
-                        throw new RuntimeException("Error parsing SQS message JSON", e);
+                        throw new TechnicalException(e, TechnicalMessage.SQS_MESSAGE_PARSING_ERROR);
                     }
                 })
                 .map(this::transformToUppercase)
-                .flatMap(dynamoAdapter::save)
-                .doOnSuccess(u -> log.info("💾 Usuario guardado en DynamoDB: {}", u))
+                .flatMap(user ->
+                        dynamoAdapter.save(user)
+                                .doOnSuccess(saved -> log.info("Usuario guardado en DynamoDB: {}", saved))
+                                .onErrorMap(err -> new TechnicalException(err, TechnicalMessage.DYNAMODB_SAVE_ERROR))
+                )
                 .then();
     }
 
@@ -40,7 +45,7 @@ public class SQSProcessor implements Function<Message, Mono<Void>> {
         user.setEmail(user.getEmail().toUpperCase());
         user.setFirstName(user.getFirstName().toUpperCase());
         user.setLastName(user.getLastName().toUpperCase());
-        log.info("🔠 Usuario transformado a mayúsculas: {}", user);
+        log.info("Usuario transformado a mayúsculas: {}", user);
         return user;
     }
 }

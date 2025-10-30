@@ -1,5 +1,6 @@
 package co.com.evelyn.onboardingreactivo.dynamodb.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,38 +14,31 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import java.net.URI;
 
 @Configuration
-@EnableConfigurationProperties(DynamoProperties.class) // Habilita la clase del Paso 1
+@EnableConfigurationProperties(DynamoProperties.class)
 public class DynamoDBConfig {
 
-    /**
-     * Crea el cliente @Primary de DynamoDB que apunta a LocalStack
-     */
+    @Value("${aws.credentials.access-key}")
+    private String accessKey;
+
+    @Value("${aws.credentials.secret-key}")
+    private String secretKey;
+
     @Bean
     @Primary
     public DynamoDbAsyncClient dynamoDbAsyncClient(DynamoProperties properties) {
-
-        String regionValue = !"us-east-1".equals(properties.region())
-                ? properties.region()
-                : "us-east-1";
+        String regionValue = properties.region() != null ? properties.region() : "us-east-1";
 
         return DynamoDbAsyncClient.builder()
                 .region(Region.of(regionValue))
-
-                // 1. Apunta al endpoint de LocalStack (leido de aws.endpoint)
                 .endpointOverride(URI.create(properties.endpoint()))
-
-                // 2. Usa las mismas credenciales "dummy" que SQS
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create("test", "test")
+                                AwsBasicCredentials.create(accessKey, secretKey)
                         )
                 )
                 .build();
     }
 
-    /**
-     * Cliente mejorado DynamoDB Enhanced (usa el cliente @Primary de arriba)
-     */
     @Bean
     public DynamoDbEnhancedAsyncClient getDynamoDbEnhancedAsyncClient(DynamoDbAsyncClient client) {
         return DynamoDbEnhancedAsyncClient.builder()

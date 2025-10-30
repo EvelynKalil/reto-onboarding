@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record DynamoProperties(
         String region,
         String endpoint,
-        DynamoDb dynamodb // Mapea la seccion 'aws.dynamodb'
+        DynamoDb dynamodb
 ) {
     /**
      * Mapea 'aws.dynamodb.table'

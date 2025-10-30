@@ -43,15 +43,20 @@ adapters:
 # -------------------------------
 aws:
   endpoint: ${AWS_ENDPOINT:http://localhost:4566}
+
   region: ${AWS_REGION:us-east-1}
+
+  credentials:
+    access-key: ${AWS_ACCESS_KEY_ID:test}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+
   dynamodb:
     table: ${AWS_DYNAMO_TABLE:user-events-table}
 
-  # ESTE BLOQUE ES PARA 'SQSSenderProperties'
   sqs:
     region: ${aws.region}
     endpoint: ${aws.endpoint}
-    queue-url: ${entrypoint.sqs.queue-url} # Referencia a la cola del listener
+    queue-url: ${entrypoint.sqs.queue-url}
 
 # -------------------------------
 # 🔹 Configuración de SQS (Entrypoint)

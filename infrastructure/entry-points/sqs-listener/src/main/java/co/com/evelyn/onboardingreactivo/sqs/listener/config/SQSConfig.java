@@ -1,6 +1,7 @@
 package co.com.evelyn.onboardingreactivo.sqs.listener.config;
 
 import co.com.evelyn.onboardingreactivo.sqs.listener.helper.SQSListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,9 +21,15 @@ import java.util.function.Function;
 @Configuration
 public class SQSConfig {
 
+    @Value("${aws.credentials.access-key}")
+    private String accessKey;
+
+    @Value("${aws.credentials.secret-key}")
+    private String secretKey;
+
     @Bean
     public SQSListener sqsListener(
-            SqsAsyncClient client, // Inyecta el cliente @Primary
+            SqsAsyncClient client,
             SQSProperties properties,
             Function<Message, Mono<Void>> fn
     ) {
@@ -35,33 +42,23 @@ public class SQSConfig {
     }
 
     @Bean
-    @Primary // 1. Es el bean primario
+    @Primary
     public SqsAsyncClient sqsAsyncClient(SQSProperties properties, MetricPublisher publisher) {
-
         String regionValue = properties.region() != null ? properties.region() : "us-east-1";
 
         return SqsAsyncClient.builder()
-
-                // 2. Apunta a LocalStack (leido de entrypoint.sqs.endpoint)
                 .endpointOverride(resolveEndpoint(properties))
-
                 .region(Region.of(regionValue))
-
-                // 3. Usa credenciales "dummy"
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create("test", "test")
+                                AwsBasicCredentials.create(accessKey, secretKey)
                         )
                 )
-
                 .overrideConfiguration(o -> o.addMetricPublisher(publisher))
                 .build();
     }
 
     protected URI resolveEndpoint(SQSProperties properties) {
-        if (properties.endpoint() != null) {
-            return URI.create(properties.endpoint());
-        }
-        return null;
+        return properties.endpoint() != null ? URI.create(properties.endpoint()) : null;
     }
 }
