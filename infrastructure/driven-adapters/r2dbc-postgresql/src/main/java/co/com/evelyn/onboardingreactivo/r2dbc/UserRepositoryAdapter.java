@@ -20,16 +20,16 @@ public class UserRepositoryAdapter
         extends ReactiveAdapterOperations<User, UserEntity, Integer, UserR2dbcRepository>
         implements UserRepository {
 
-    private final UserR2dbcRepository repository;
+    private final UserR2dbcRepository userRepository;
     private final ReqresAdapter reqresAdapter;
     private final RedisRepositoryAdapter redisRepositoryAdapter;
 
-    public UserRepositoryAdapter(UserR2dbcRepository repository,
+    public UserRepositoryAdapter(UserR2dbcRepository userRepository,
                                  ReqresAdapter reqresAdapter,
                                  ObjectMapper mapper,
                                  RedisRepositoryAdapter redisRepositoryAdapter) {
-        super(repository, mapper, d -> mapper.map(d, User.class));
-        this.repository = repository;
+        super(userRepository, mapper, d -> mapper.map(d, User.class));
+        this.userRepository = userRepository;
         this.reqresAdapter = reqresAdapter;
         this.redisRepositoryAdapter = redisRepositoryAdapter;
     }
@@ -39,8 +39,7 @@ public class UserRepositoryAdapter
     public Mono<User> findById(Integer id) {
         return redisRepositoryAdapter.getUserFromCache(id)
                 .switchIfEmpty(
-                        repository.findById(id)
-                                .switchIfEmpty(Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND)))
+                        userRepository.findById(id)
                                 .map(this::toEntity)
                                 .flatMap(user ->
                                         redisRepositoryAdapter.saveUserToCache(user)
@@ -79,7 +78,7 @@ public class UserRepositoryAdapter
     @Override
     public Mono<User> save(User user) {
         return repository.existsById(user.getId())
-                .flatMap(exists -> exists
+                .flatMap(exists -> Boolean.TRUE.equals(exists)
                                 ? repository.save(toData(user))
                                 : repository.insert(
                                 user.getId(),

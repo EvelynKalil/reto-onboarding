@@ -50,8 +50,6 @@ public class Handler {
     /** GET /users */
     public Mono<ServerResponse> getAllUsers(ServerRequest request) {
         // reference for Sonar (avoid unused warning)
-        request.path();
-
         Mono<ServerResponse> pipeline =
                 ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)

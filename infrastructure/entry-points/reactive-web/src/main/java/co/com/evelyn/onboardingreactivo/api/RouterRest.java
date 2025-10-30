@@ -13,6 +13,7 @@ public class RouterRest {
 
     @Bean
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
+        // reference for Sonar (avoid unused warning)
         return RouterFunctions.route(POST("/users/{id}"), handler::createUser)
                 .andRoute(GET("/users/{id}"), handler::getUserById)
                 .andRoute(GET("/users").and(queryParam("name", name -> true)), handler::getUsersByName)

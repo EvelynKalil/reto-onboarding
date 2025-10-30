@@ -5,13 +5,15 @@ import co.com.evelyn.onboardingreactivo.model.exceptions.BusinessException;
 import co.com.evelyn.onboardingreactivo.model.exceptions.TechnicalException;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ReqresAdapter {
@@ -24,7 +26,6 @@ public class ReqresAdapter {
     @Value("${adapter.restconsumer.apikey}")
     private String apiKey;
 
-    /** Llama a la API Reqres.in y traduce los errores a excepciones del dominio */
     public Mono<User> fetchUserById(Integer id) {
         WebClient client = webClientBuilder
                 .baseUrl(baseUrl)
@@ -34,14 +35,6 @@ public class ReqresAdapter {
         return client.get()
                 .uri("/users/{id}", id)
                 .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, response ->
-                        response.statusCode().value() == 404
-                                ? Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND))
-                                : Mono.error(new TechnicalException(TechnicalMessage.INVALID_REQUEST))
-                )
-                .onStatus(HttpStatusCode::is5xxServerError,
-                        response -> Mono.error(new TechnicalException(TechnicalMessage.INTERNAL_ERROR))
-                )
                 .bodyToMono(ReqresUserResponse.class)
                 .map(ReqresUserResponse::getData)
                 .map(data -> User.builder()
@@ -50,13 +43,20 @@ public class ReqresAdapter {
                         .firstName(data.getFirst_name())
                         .lastName(data.getLast_name())
                         .avatar(data.getAvatar())
-                        .build()
-                )
-                .onErrorMap(WebClientResponseException.class, ex -> {
-                    if (ex.getStatusCode().value() == 404) {
-                        return new BusinessException(TechnicalMessage.USER_NOT_FOUND);
+                        .build())
+                .doOnNext(u -> log.info("✅ Usuario obtenido de Reqres.in: {}", u))
+                .onErrorResume(WebClientResponseException.class, ex -> {
+                    int status = ex.getStatusCode().value();
+                    if (status == HttpStatus.NOT_FOUND.value()) {
+                        log.warn("⚠️ Usuario {} no encontrado en Reqres.in", id);
+                        return Mono.error(new BusinessException(TechnicalMessage.USER_NOT_FOUND));
                     }
-                    return new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR);
+                    log.error("❌ Error HTTP {} desde Reqres.in", status, ex);
+                    return Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR));
+                })
+                .onErrorResume(ex -> {
+                    log.error("🌐 Error inesperado al consumir Reqres.in", ex);
+                    return Mono.error(new TechnicalException(ex, TechnicalMessage.INTERNAL_ERROR));
                 });
     }
 }
