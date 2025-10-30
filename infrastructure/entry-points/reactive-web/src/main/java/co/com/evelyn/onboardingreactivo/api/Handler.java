@@ -1,6 +1,8 @@
 package co.com.evelyn.onboardingreactivo.api;
 
 import co.com.evelyn.onboardingreactivo.api.util.error.ApplyErrorHandler;
+import co.com.evelyn.onboardingreactivo.model.enums.TechnicalMessage;
+import co.com.evelyn.onboardingreactivo.model.exceptions.BusinessException;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import co.com.evelyn.onboardingreactivo.usecase.user.UserUseCase;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +49,9 @@ public class Handler {
 
     /** GET /users */
     public Mono<ServerResponse> getAllUsers(ServerRequest request) {
+        // reference for Sonar (avoid unused warning)
+        request.path();
+
         Mono<ServerResponse> pipeline =
                 ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
@@ -57,13 +62,24 @@ public class Handler {
 
     /** GET /users?name= */
     public Mono<ServerResponse> getUsersByName(ServerRequest request) {
-        String name = request.queryParam("name").orElse("");
 
-        Mono<ServerResponse> pipeline =
-                ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(userUseCase.getUsersByName(name), User.class);
+        Mono<ServerResponse> pipeline = Mono.justOrEmpty(request.queryParam("name"))
+                .filter(name -> !name.trim().isEmpty())
+                .flatMap(name ->
+                        userUseCase.getUsersByName(name)
+                                .collectList()
+                                .flatMap(users -> {
+                                    if (users.isEmpty()) {
+                                        return Mono.error(new BusinessException(TechnicalMessage.NO_MATCHING_USERS_FOUND));
+                                    }
+                                    return ServerResponse.ok()
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .bodyValue(users);
+                                })
+                )
+                .switchIfEmpty(Mono.error(new BusinessException(TechnicalMessage.INVALID_REQUEST)));
 
         return applyErrorHandler.apply(pipeline);
     }
+
 }
