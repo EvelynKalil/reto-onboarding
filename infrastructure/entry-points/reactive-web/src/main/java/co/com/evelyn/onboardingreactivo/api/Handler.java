@@ -42,10 +42,12 @@ public class Handler {
                 userUseCase.getUserById(id)
                         .flatMap(user -> ServerResponse.ok()
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .body(fromValue(user)));
+                                .body(fromValue(user)))
+                        .switchIfEmpty(ServerResponse.notFound().build());
 
         return applyErrorHandler.apply(pipeline);
     }
+
 
     /** GET /users */
     public Mono<ServerResponse> getAllUsers(ServerRequest request) {

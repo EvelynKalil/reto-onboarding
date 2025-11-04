@@ -5,6 +5,8 @@ buildscript {
 		sonarVersion = '6.3.1.5724'
 		jacocoVersion = '0.8.13'
         lombokVersion = '1.18.38'
+        logbackVersion = '1.5.11'
+        logstashLogbackVersion = '8.0'
 	}
 }
 

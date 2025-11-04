@@ -139,6 +139,12 @@ http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/user-events-ta
 
 ---
 
+### 5. lanzar app
+
+```bash
+./gradlew bootRun 
+```
+
 ## Endpoints principales
 
 ### Crear usuario por ID

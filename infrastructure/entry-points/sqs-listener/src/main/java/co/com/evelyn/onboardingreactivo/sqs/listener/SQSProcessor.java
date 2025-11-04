@@ -42,10 +42,16 @@ public class SQSProcessor implements Function<Message, Mono<Void>> {
     }
 
     private User transformToUppercase(User user) {
-        user.setEmail(user.getEmail().toUpperCase());
-        user.setFirstName(user.getFirstName().toUpperCase());
-        user.setLastName(user.getLastName().toUpperCase());
-        log.info("Usuario transformado a mayúsculas: {}", user);
-        return user;
+        User transformed = User.builder()
+                .id(user.getId())
+                .email(user.getEmail().toUpperCase())
+                .firstName(user.getFirstName().toUpperCase())
+                .lastName(user.getLastName().toUpperCase())
+                .avatar(user.getAvatar())
+                .build();
+
+        log.info("Usuario transformado a mayusculas: {}", transformed);
+        return transformed;
     }
+
 }
