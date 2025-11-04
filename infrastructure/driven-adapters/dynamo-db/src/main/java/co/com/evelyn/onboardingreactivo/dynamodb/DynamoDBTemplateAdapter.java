@@ -1,6 +1,6 @@
 package co.com.evelyn.onboardingreactivo.dynamodb;
 
-import co.com.evelyn.onboardingreactivo.dynamodb.config.DynamoProperties; // ◀️ 1. IMPORTAR
+import co.com.evelyn.onboardingreactivo.dynamodb.config.DynamoProperties;
 import co.com.evelyn.onboardingreactivo.dynamodb.helper.TemplateAdapterOperations;
 import co.com.evelyn.onboardingreactivo.model.user.User;
 import org.reactivecommons.utils.ObjectMapper;

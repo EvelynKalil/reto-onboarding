@@ -1,0 +1,45 @@
+<configuration>
+    <!--
+        === Appender básico (texto plano) ===
+        Se mantiene solo para depuración local.
+    -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p --- [%15.15t] %-40.40logger{39} : %m%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <!--
+        === Appender principal (JSON estructurado con Logstash) ===
+    -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Campos personalizados que se agregan a todos los logs -->
+            <customFields>{"application":"onboarding-reactivo","environment":"local"}</customFields>
+
+            <!--
+                Enmascaramiento automático de campos sensibles.
+                Todo campo con ese nombre en el JSON del log se reemplaza con **********
+            -->
+            <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+                <defaultMask>**********</defaultMask>
+                <path>password</path>
+                <path>email</path>
+                <path>firstName</path>
+                <path>lastName</path>
+                <path>dni</path>
+            </jsonGeneratorDecorator>
+        </encoder>
+    </appender>
+
+
+    <!--
+        === Configuración de niveles de log ===
+    -->
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>

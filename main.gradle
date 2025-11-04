@@ -41,6 +41,27 @@ subprojects {
         implementation platform("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
     }
 
+    configurations {
+        configureEach {
+            if (!project.name.equalsIgnoreCase("app-service")) {
+                exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+                exclude group: 'ch.qos.logback', module: 'logback-classic'
+                exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+            }
+        }
+    }
+
+
+    dependencies {
+        if (!project.name.equalsIgnoreCase(modelModule) && !project.name.equalsIgnoreCase(useCaseModule)) {
+            dependencies.add("implementation", "org.slf4j:slf4j-api:2.0.13")
+            dependencies.add("implementation", "ch.qos.logback:logback-classic:${logbackVersion}")
+            dependencies.add("implementation", "net.logstash.logback:logstash-logback-encoder:${logstashLogbackVersion}")
+        }
+    }
+
+
+
     tasks.withType(Test).configureEach {
         if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_13)) {
             jvmArgs += [
